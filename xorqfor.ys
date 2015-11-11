@@ -1,0 +1,76 @@
+.pos 0x0
+nop
+irmovq 1, %rax
+nop
+nop
+irmovq 3, %rbx  # F D X M W 
+#
+# test 1.
+# the following will test forwarding of e_valE for d_srcB
+xorq %rax, %rbx #   F D X M W
+nop
+nop
+#
+# test 2. 
+# the following will test the forwarding of e_valE for d_srcA
+irmovq 1, %rax    # F D X M W
+xorq %rax, %rbx   #   F D X M W
+nop
+nop
+nop
+#
+# test 3. 
+# the following will test the forwarding of m_valE for d_srcB
+irmovq 3, %rcx
+irmovq $0xFF, %rax
+nop 
+nop
+nop
+# ensure that we writeback to the register before we start the next instruction
+irmovq 4, %rax      # F D X M W
+nop                 #   F D X M W
+# the value of %rbx should now be in m_valE 
+xorq %rcx, %rax     #     F D X M W
+nop                 
+nop
+nop
+# 
+#
+# test 4. 
+# the following will test the forwarding of M_valE for d_srcA
+irmovq 3,%rax       # F D X M W
+nop                 #   F D X M W
+xorq %rax, %rbx     #     F D X M W # M_dstE 
+nop
+nop
+nop
+# test 5. 
+# The following will test the forwarding of W_valE for d_srcB
+irmovq 4, %rax 
+irmovq 3, %rbx     # F D X M W
+nop                #   F D X M W
+nop                #     F D X M W
+# the value of %rbx should be in W_valE
+xorq %rax, %rbx    #       F D X M W
+nop
+nop
+nop
+# test 6.
+# the following will test the forwarding of W_valE for d_srcA 
+irmovq 3, %rbx
+irmovq 4, %rax    # F D X M W
+nop               #   F D X M W
+nop               #     F D X M W
+xorq %rax, %rbx   #       F D X M W 
+nop
+nop
+nop
+# test 7 / 8. 
+# the following is just going to test plain register loads
+irmovq 5, %rax
+irmovq 7, %rcx
+nop
+nop
+xorq %rax, %rbx # d_srcA
+xorq %rax, %rcx # d_srcB
+halt
