@@ -20,6 +20,7 @@ bool DecodeStage::doClockLow(PipeRegister ** pregs, Stage ** stages) {
     W * wreg = (W*)pregs[WREG];
     M * mreg = (M*)pregs[MREG];
     ExecuteStage * e_stage = (ExecuteStage*)stages[ESTAGE];
+    MemoryStage * m_stage = (MemoryStage*)stages[MSTAGE];
     uint64_t stat = dreg->getstat()->getOutput();
     uint64_t icode = dreg->geticode()->getOutput();
     uint64_t ifun = dreg->getifun()->getOutput();
@@ -28,8 +29,8 @@ bool DecodeStage::doClockLow(PipeRegister ** pregs, Stage ** stages) {
     uint64_t dstM = d_dstM(icode, dreg->getrA());
     uint64_t srcA = d_srcA(icode, dreg->getrA());
     uint64_t srcB = d_srcB(icode, dreg->getrB());
-    uint64_t valA = d_valA(e_stage, mreg, wreg, srcA);
-    uint64_t valB = d_valB(e_stage, mreg, wreg, srcB);
+    uint64_t valA = d_valA(e_stage, m_stage, mreg, wreg, srcA);
+    uint64_t valB = d_valB(e_stage, m_stage, mreg, wreg, srcB);
     setEInput(ereg, stat, icode, ifun, valC, valA, valB, dstE, dstM, srcA, srcB);
     return false;
 }
@@ -108,17 +109,24 @@ uint64_t DecodeStage::d_dstM(uint64_t icode, PipeReg * rA) {
     return RNONE;
 }
 // Get valA
-uint64_t DecodeStage::d_valA(ExecuteStage * e_stage, M * m_reg, W * w_reg, uint64_t d_srcA) {
+uint64_t DecodeStage::d_valA(ExecuteStage * e_stage, MemoryStage * m_stage, M * m_reg, W * w_reg, uint64_t d_srcA) {
     uint64_t e_dstE = e_stage->get_dstE();
     uint64_t M_dstE = m_reg->getdstE()->getOutput();
+    uint64_t M_dstM = m_reg->getdstM()->getOutput();
     uint64_t W_dstE = w_reg->getdstE()->getOutput();
-
+    uint64_t W_dstM = w_reg->getdstM()->getOutput();
+    if(d_srcA == RNONE) {
+        return 0;
+    }
     // If the src is the same as e_dstE, we're gonna forward
     if (d_srcA == e_dstE) {
         return e_stage->get_valE();
     }
 
     // if the source is the same as M_dstE we're gonna forward
+    if (d_srcA == M_dstM) {
+        return m_stage->get_valM();
+    }
     if (d_srcA == M_dstE) {
         return m_reg->getvalE()->getOutput();
     }
@@ -126,16 +134,24 @@ uint64_t DecodeStage::d_valA(ExecuteStage * e_stage, M * m_reg, W * w_reg, uint6
     if (d_srcA == W_dstE) {
         return w_reg->getvalE()->getOutput();
     }
+    if (d_srcA == W_dstM) {
+        return w_reg->getvalM()->getOutput();
+    }
 
     // if we fall through, we're just gonna do a normal read from register
     RegisterFile * reg = RegisterFile::getInstance();
     return reg->readRegister(d_srcA);
 }
 
-uint64_t DecodeStage::d_valB(ExecuteStage * e_stage, M * m_reg, W * w_reg, uint64_t d_srcB) {
+uint64_t DecodeStage::d_valB(ExecuteStage * e_stage, MemoryStage * m_stage, M * m_reg, W * w_reg, uint64_t d_srcB) {
     uint64_t e_dstE = e_stage->get_dstE();
     uint64_t M_dstE = m_reg->getdstE()->getOutput();
+    uint64_t M_dstM = m_reg->getdstM()->getOutput();
     uint64_t W_dstE = w_reg->getdstE()->getOutput();
+    uint64_t W_dstM = w_reg->getdstM()->getOutput();
+    if(d_srcB == RNONE) {
+        return 0;
+    }
 
     if (d_srcB == e_dstE) {
         return e_stage->get_valE();
@@ -145,8 +161,14 @@ uint64_t DecodeStage::d_valB(ExecuteStage * e_stage, M * m_reg, W * w_reg, uint6
         return m_reg->getvalE()->getOutput();
     }
 
+    if (d_srcB == M_dstM) {
+        return m_stage->get_valM();
+    }
     if (d_srcB == W_dstE) {
         return w_reg->getvalE()->getOutput();
+    }
+    if (d_srcB == W_dstM) {
+        return w_reg->getvalM()->getOutput();
     }
 
     RegisterFile * reg = RegisterFile::getInstance();

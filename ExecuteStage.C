@@ -40,15 +40,17 @@ bool ExecuteStage::doClockLow(PipeRegister ** pregs, Stage ** stages) {
     uint64_t e_aluA = aluA(icode, e_valA, e_valC);
     uint64_t e_aluB = aluB(icode, e_valB);
     valE = exec_alu(e_alufun, e_aluA, e_aluB, set_cc(icode));
-
-    setMInput(mreg, stat, icode, valE, e_valA, dstE, e_dstM);
+    uint64_t e_cond = cond(icode, ifun);
+    dstE = e_dstE(icode, dstE, e_cond);
+    setMInput(mreg, stat, icode, e_cond, valE, e_valA, dstE, e_dstM);
     return false;
 }
 
-void ExecuteStage::setMInput(M * mreg, uint64_t stat, uint64_t icode, uint64_t valE, uint64_t valA, uint64_t dstE, uint64_t dstM) {
+void ExecuteStage::setMInput(M * mreg, uint64_t stat, uint64_t icode, uint64_t cond, uint64_t valE, uint64_t valA, uint64_t dstE, uint64_t dstM) {
     mreg->getstat()->setInput(stat);
     mreg->geticode()->setInput(icode);
     mreg->getvalE()->setInput(valE);
+    mreg->getCnd()->setInput(cond);
     mreg->getvalA()->setInput(valA);
     mreg->getdstE()->setInput(dstE);
     mreg->getdstM()->setInput(dstM);
@@ -99,6 +101,33 @@ uint64_t ExecuteStage::exec_alu(uint64_t alufun, uint64_t aluA, uint64_t aluB, b
     return result;
 }
 
+
+uint64_t ExecuteStage::cond(uint64_t icode, uint64_t ifun) {
+    ConditionCodes * codes = ConditionCodes::getInstance();
+
+    uint8_t of = codes->getConditionCode(OF);
+    uint8_t sf = codes->getConditionCode(SF);
+    uint8_t zf = codes->getConditionCode(ZF);
+    if(icode == IJXX || icode == ICMOVXX) {
+        switch(ifun) {
+        case UNCOND:
+            return 1;
+        case EQUAL:
+            return (zf == 1);
+        case NOTEQUAL:
+            return (zf == 0);
+        case GREATEREQ:
+            return ((sf ^ of) == 0);
+        case GREATER:
+            return ((sf ^ of) == 0 && zf == 0);
+        case LESSEQ:
+            return ((sf ^ of)  || zf == 1);
+        case LESS:
+            return (sf ^ of);
+        }
+    }
+    return 0;
+}
 // Get the value for aluA
 uint64_t ExecuteStage::aluA(uint64_t e_icode, uint64_t e_valA, uint64_t e_valC) {
     if(e_icode == IRRMOVQ || e_icode == IOPQ) {
