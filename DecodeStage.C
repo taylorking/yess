@@ -149,6 +149,7 @@ uint64_t DecodeStage::d_valB(ExecuteStage * e_stage, MemoryStage * m_stage, M * 
     uint64_t M_dstM = m_reg->getdstM()->getOutput();
     uint64_t W_dstE = w_reg->getdstE()->getOutput();
     uint64_t W_dstM = w_reg->getdstM()->getOutput();
+    
     if(d_srcB == RNONE) {
         return 0;
     }
@@ -164,9 +165,11 @@ uint64_t DecodeStage::d_valB(ExecuteStage * e_stage, MemoryStage * m_stage, M * 
     if (d_srcB == M_dstM) {
         return m_stage->get_valM();
     }
+    
     if (d_srcB == W_dstE) {
         return w_reg->getvalE()->getOutput();
     }
+    
     if (d_srcB == W_dstM) {
         return w_reg->getvalM()->getOutput();
     }
